@@ -35,14 +35,24 @@ export const usersService = {
   },
 
   async inviteUser({ email, name, role, companyId }, adminId) {
-    // Cria usuário via Supabase Auth Admin (requer service role no backend)
-    // Por ora usa signUp padrão com metadados
-    const { data, error } = await supabase.auth.admin.createUser({
+    // Cria um client temporário para não deslogar o admin atual
+    const { createClient } = await import('@supabase/supabase-js');
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+    
+    const { data, error } = await tempClient.auth.signUp({
       email,
-      password: Math.random().toString(36).slice(-10) + 'A1!',
-      email_confirm: true,
-      user_metadata: { name, role, company_id: companyId },
+      password: tempPassword,
+      options: {
+        data: { name, role, company_id: companyId }
+      }
     });
+
     if (error) throw error;
 
     await supabase.from('activity_logs').insert({
