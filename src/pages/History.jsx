@@ -6,14 +6,14 @@ import { formatDate } from '../utils/format';
 import Spinner from '../components/ui/Spinner';
 
 export default function History() {
-  const { profile } = useAuth();
+  const { profile, activeCenter } = useAuth();
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const hist = await stockService.getHistory(profile.company_id);
+        const hist = await stockService.getHistory(profile.company_id, activeCenter?.id);
         setMovements(hist);
       } catch (err) {
         console.error(err);
@@ -21,8 +21,8 @@ export default function History() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter]);
 
   if (loading) return <div className="loading-screen"><Spinner /></div>;
 

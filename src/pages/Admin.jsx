@@ -73,7 +73,7 @@ export default function Admin() {
     setSaving(true);
     try {
       await usersService.inviteUser({ ...userForm, companyId: profile.company_id }, profile.id);
-      toast.success('Usuário convidado! A senha padrão é espazio123');
+      toast.success('Usuário criado! A senha padrão é espazio123');
       setIsUserModalOpen(false);
       const data = await usersService.list(profile.company_id);
       setUsers(data);
@@ -242,8 +242,8 @@ export default function Admin() {
 
       {/* Modals */}
       {isUserModalOpen && (
-        <Modal title="Convidar Usuário" onClose={() => setIsUserModalOpen(false)} footer={
-          <button className="btn btn-primary" onClick={handleInviteUser} disabled={saving}>{saving ? <Spinner size={24} /> : 'Convidar'}</button>
+        <Modal title="Criar Usuário" onClose={() => setIsUserModalOpen(false)} footer={
+          <button className="btn btn-primary" onClick={handleInviteUser} disabled={saving}>{saving ? <Spinner size={24} /> : 'Criar'}</button>
         }>
           <div className="form-group">
             <label className="form-label">Nome</label>

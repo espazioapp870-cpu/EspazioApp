@@ -14,7 +14,7 @@ const periods = [
 ];
 
 export default function Reports() {
-  const { profile } = useAuth();
+  const { profile, activeCenter } = useAuth();
   const toast = useToast();
   
   const [period, setPeriod] = useState('week');
@@ -27,9 +27,9 @@ export default function Reports() {
       try {
         const dates = getPeriodDates(period);
         const [outputs, stats, top] = await Promise.all([
-          stockService.getOutputsReport(profile.company_id, { startDate: dates.start, endDate: dates.end }),
-          stockService.getPeriodStats(profile.company_id, { startDate: dates.start, endDate: dates.end }),
-          stockService.getTopProducts(profile.company_id, { startDate: dates.start, endDate: dates.end }),
+          stockService.getOutputsReport(profile.company_id, activeCenter?.id, { startDate: dates.start, endDate: dates.end }),
+          stockService.getPeriodStats(profile.company_id, activeCenter?.id, { startDate: dates.start, endDate: dates.end }),
+          stockService.getTopProducts(profile.company_id, activeCenter?.id, { startDate: dates.start, endDate: dates.end }),
         ]);
         setData({ outputs, stats, top, label: dates.label });
       } catch (err) {
@@ -38,8 +38,8 @@ export default function Reports() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile, period]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter, period]);
 
   const handleExportWA = () => {
     if (!data) return;

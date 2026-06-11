@@ -35,22 +35,12 @@ export const usersService = {
   },
 
   async inviteUser({ email, name, role, companyId, centerId }, adminId) {
-    // Cria um client temporário para não deslogar o admin atual
-    const { createClient } = await import('@supabase/supabase-js');
-    const tempClient = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
-
-    const tempPassword = 'espazio123';
-    
-    const { data, error } = await tempClient.auth.signUp({
-      email,
-      password: tempPassword,
-      options: {
-        data: { name, role, company_id: companyId, center_id: centerId }
-      }
+    const { data, error } = await supabase.rpc('admin_create_user', {
+      p_company_id: companyId,
+      p_center_id: centerId,
+      p_name: name,
+      p_email: email,
+      p_role: role
     });
 
     if (error) throw error;

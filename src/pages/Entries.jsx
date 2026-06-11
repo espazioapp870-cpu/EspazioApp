@@ -9,7 +9,7 @@ import QuantityStepper from '../components/ui/QuantityStepper';
 import Spinner from '../components/ui/Spinner';
 
 export default function Entries() {
-  const { profile } = useAuth();
+  const { profile, activeCenter } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   
@@ -47,6 +47,7 @@ export default function Entries() {
     try {
       await stockService.registerEntry({
         companyId: profile.company_id,
+        centerId: activeCenter?.id,
         productId: selectedProduct.id,
         userId: profile.id,
         quantity,

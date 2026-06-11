@@ -11,7 +11,7 @@ import QuantityStepper from '../components/ui/QuantityStepper';
 import Spinner from '../components/ui/Spinner';
 
 export default function Outputs() {
-  const { profile } = useAuth();
+  const { profile, activeCenter } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   
@@ -80,6 +80,7 @@ export default function Outputs() {
     try {
       await stockService.registerOutput({
         companyId: profile.company_id,
+        centerId: activeCenter?.id,
         productId: selectedProduct.id,
         employeeId: selectedEmployee.id,
         userId: profile.id,
