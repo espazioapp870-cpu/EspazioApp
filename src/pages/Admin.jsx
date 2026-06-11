@@ -217,38 +217,49 @@ export default function Admin() {
               </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                <div className="role-pills">
-                  {['administrator', 'editor', 'viewer'].map(role => {
-                    if (role === 'administrator' && !profile?.is_superadmin) return null;
-                    return (
-                      <button
-                        key={role}
-                        className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
-                        onClick={() => u.id !== profile.id && handleRoleChange(u.id, role)}
-                        disabled={u.id === profile.id}
-                      >
-                        {roleLabelShort(role)}
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Role pills: Admin normal não mexe nas pills do Super Admin */}
+                {(!u.is_superadmin || profile?.is_superadmin) && (
+                  <div className="role-pills">
+                    {['administrator', 'editor', 'viewer'].map(role => {
+                      if (role === 'administrator' && !profile?.is_superadmin) return null;
+                      return (
+                        <button
+                          key={role}
+                          className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
+                          onClick={() => u.id !== profile.id && !u.is_superadmin && handleRoleChange(u.id, role)}
+                          disabled={u.id === profile.id || (u.is_superadmin && !profile?.is_superadmin)}
+                        >
+                          {roleLabelShort(role)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Tag visual para Super Admin quando visto por admin normal */}
+                {u.is_superadmin && !profile?.is_superadmin && (
+                  <span style={{ fontSize: '11px', color: 'goldenrod', fontWeight: 700, padding: '2px 8px', border: '1px solid goldenrod', borderRadius: '20px' }}>★ Super Admin</span>
+                )}
                 {u.id !== profile.id && (
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
-                      Resetar Senha
-                    </button>
+                    {/* Resetar e Excluir: só visíveis para o próprio SuperAdmin, ou para admins normais sobre usuários NÃO super admin */}
+                    {(!u.is_superadmin || profile?.is_superadmin) && (
+                      <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
+                        Resetar Senha
+                      </button>
+                    )}
                     {profile?.is_superadmin && (
                       <button 
-                        className={`btn btn-outline`} 
-                        style={{ padding: '4px 8px', fontSize: '12px', borderColor: u.is_superadmin ? 'gold' : 'var(--border)', color: u.is_superadmin ? 'goldenrod' : 'inherit' }}
+                        style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '20px', border: `1px solid ${u.is_superadmin ? 'goldenrod' : 'var(--border)'}`, background: u.is_superadmin ? 'rgba(218,165,32,0.15)' : 'transparent', color: u.is_superadmin ? 'goldenrod' : 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
                         onClick={() => handleSuperAdminToggle(u.id, !u.is_superadmin)}
                       >
                         {u.is_superadmin ? '★ Super Admin' : '☆ Tornar Super Admin'}
                       </button>
                     )}
-                    <button className="btn" style={{ padding: '4px 8px', fontSize: '12px', background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)' }} onClick={() => setUserToDelete(u)}>
-                      Excluir
-                    </button>
+                    {(!u.is_superadmin || profile?.is_superadmin) && (
+                      <button className="btn" style={{ padding: '4px 8px', fontSize: '12px', background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)' }} onClick={() => setUserToDelete(u)}>
+                        Excluir
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
