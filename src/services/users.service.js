@@ -73,17 +73,16 @@ export const usersService = {
 
     if (error) throw error;
 
-    // Garantir que o profile foi criado corretamente com company_id e center_id
+    // Garantir o profile via RPC (bypassa RLS)
     if (data.user?.id) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email,
-        name,
-        role,
-        company_id: companyId,
-        center_id: centerId,
-        is_superadmin: false,
-      }, { onConflict: 'id' });
+      await supabase.rpc('admin_ensure_profile', {
+        p_user_id:    data.user.id,
+        p_email:      email,
+        p_name:       name,
+        p_role:       role,
+        p_company_id: companyId,
+        p_center_id:  centerId,
+      });
     }
 
     await supabase.from('activity_logs').insert({
