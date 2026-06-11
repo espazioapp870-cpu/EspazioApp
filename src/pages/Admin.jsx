@@ -47,7 +47,7 @@ export default function Admin() {
         setCenters(cntrs.data || []);
         
         if (u.length && cntrs.data?.length) {
-          setUserForm(prev => ({ ...prev, centerId: cntrs.data[0].id }));
+          setUserForm(prev => ({ ...prev, centerId: profile?.is_superadmin ? cntrs.data[0].id : profile.center_id }));
         }
       } catch (err) {
         toast.error('Erro ao carregar dados do admin');
@@ -66,6 +66,16 @@ export default function Admin() {
       toast.success('Permissão atualizada');
     } catch (err) {
       toast.error('Erro ao atualizar permissão');
+    }
+  };
+
+  const handleSuperAdminToggle = async (userId, isSuperAdmin) => {
+    try {
+      await usersService.toggleSuperAdmin(userId, isSuperAdmin, profile.id, profile.company_id);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_superadmin: isSuperAdmin } : u));
+      toast.success(isSuperAdmin ? 'Tornado Super Admin' : 'Super Admin revogado');
+    } catch (err) {
+      toast.error('Erro ao alterar status de Super Admin');
     }
   };
 
@@ -185,13 +195,15 @@ export default function Admin() {
         </h1>
         {activeTab === 'users' && <button className="btn-new" onClick={() => setIsUserModalOpen(true)}>+ Usuário</button>}
         {activeTab === 'categories' && <button className="btn-new" onClick={() => setIsCategoryModalOpen(true)}>+ Categoria</button>}
-        {activeTab === 'centers' && <button className="btn-new" onClick={() => setIsCenterModalOpen(true)}>+ Centro</button>}
+        {activeTab === 'centers' && profile?.is_superadmin && <button className="btn-new" onClick={() => setIsCenterModalOpen(true)}>+ Centro</button>}
       </div>
 
       <div className="admin-tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
         <button className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>Usuários ({users.length})</button>
         <button className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>Categorias ({categories.length})</button>
-        <button className={`tab-btn ${activeTab === 'centers' ? 'active' : ''}`} onClick={() => setActiveTab('centers')}>Centros ({centers.length})</button>
+        {profile?.is_superadmin && (
+          <button className={`tab-btn ${activeTab === 'centers' ? 'active' : ''}`} onClick={() => setActiveTab('centers')}>Centros ({centers.length})</button>
+        )}
       </div>
 
       {activeTab === 'users' && (
@@ -206,22 +218,34 @@ export default function Admin() {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                 <div className="role-pills">
-                  {['administrator', 'editor', 'viewer'].map(role => (
-                    <button
-                      key={role}
-                      className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
-                      onClick={() => u.id !== profile.id && handleRoleChange(u.id, role)}
-                      disabled={u.id === profile.id}
-                    >
-                      {roleLabelShort(role)}
-                    </button>
-                  ))}
+                  {['administrator', 'editor', 'viewer'].map(role => {
+                    if (role === 'administrator' && !profile?.is_superadmin) return null;
+                    return (
+                      <button
+                        key={role}
+                        className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
+                        onClick={() => u.id !== profile.id && handleRoleChange(u.id, role)}
+                        disabled={u.id === profile.id}
+                      >
+                        {roleLabelShort(role)}
+                      </button>
+                    );
+                  })}
                 </div>
                 {u.id !== profile.id && (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
                       Resetar Senha
                     </button>
+                    {profile?.is_superadmin && (
+                      <button 
+                        className={`btn btn-outline`} 
+                        style={{ padding: '4px 8px', fontSize: '12px', borderColor: u.is_superadmin ? 'gold' : 'var(--border)', color: u.is_superadmin ? 'goldenrod' : 'inherit' }}
+                        onClick={() => handleSuperAdminToggle(u.id, !u.is_superadmin)}
+                      >
+                        {u.is_superadmin ? '★ Super Admin' : '☆ Tornar Super Admin'}
+                      </button>
+                    )}
                     <button className="btn" style={{ padding: '4px 8px', fontSize: '12px', background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)' }} onClick={() => setUserToDelete(u)}>
                       Excluir
                     </button>
@@ -277,18 +301,20 @@ export default function Admin() {
           <div className="form-group">
             <label className="form-label">Permissão</label>
             <select className="form-input" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value})}>
-              <option value="administrator">Administrador (Tudo)</option>
+              {profile?.is_superadmin && <option value="administrator">Administrador (Tudo)</option>}
               <option value="editor">Editor (Cadastros)</option>
               <option value="viewer">Visualizador (Saídas/Entradas)</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Centro de Custo</label>
-            <select className="form-input" value={userForm.centerId} onChange={e => setUserForm({...userForm, centerId: e.target.value})}>
-              <option value="">Selecione...</option>
-              {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+          {profile?.is_superadmin && (
+            <div className="form-group">
+              <label className="form-label">Centro de Custo</label>
+              <select className="form-input" value={userForm.centerId} onChange={e => setUserForm({...userForm, centerId: e.target.value})}>
+                <option value="">Selecione...</option>
+                {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
         </Modal>
       )}
 

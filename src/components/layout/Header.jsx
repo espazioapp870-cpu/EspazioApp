@@ -30,15 +30,21 @@ export default function Header() {
       </div>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
-        {centers && centers.length > 0 && (
-          <select 
-            style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
-            value={activeCenter?.id || ''}
-            onChange={(e) => setActiveCenter(centers.find(c => c.id === e.target.value))}
-            title="Selecionar Centro"
-          >
-            {centers.map(c => <option key={c.id} value={c.id}>📍 {c.name}</option>)}
-          </select>
+        {profile?.is_superadmin ? (
+          centers && centers.length > 0 && (
+            <select 
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+              value={activeCenter?.id || ''}
+              onChange={(e) => setActiveCenter(centers.find(c => c.id === e.target.value))}
+              title="Selecionar Centro"
+            >
+              {centers.map(c => <option key={c.id} value={c.id}>📍 {c.name}</option>)}
+            </select>
+          )
+        ) : (
+          <div style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500 }}>
+            📍 {activeCenter?.name || 'Centro'}
+          </div>
         )}
         <button className="header-logout" onClick={signOut} title="Sair" style={{ marginLeft: 0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">

@@ -34,6 +34,27 @@ export const usersService = {
     return data;
   },
 
+  async toggleSuperAdmin(userId, isSuperAdmin, adminId, companyId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_superadmin: isSuperAdmin })
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await supabase.from('activity_logs').insert({
+      company_id: companyId,
+      user_id: adminId,
+      action: 'role_change',
+      entity_type: 'profiles',
+      entity_id: userId,
+      metadata: { new_superadmin: isSuperAdmin },
+    });
+
+    return data;
+  },
+
   async inviteUser({ email, name, role, companyId, centerId }, adminId) {
     const { createClient } = await import('@supabase/supabase-js');
     const tempClient = createClient(
