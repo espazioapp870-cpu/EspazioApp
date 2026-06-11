@@ -21,4 +21,14 @@ export const categoriesService = {
     if (error) throw error;
     return data;
   },
+
+  async remove(id, companyId) {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', companyId);
+    
+    if (error) throw error;
+  },
 };

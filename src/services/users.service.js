@@ -5,7 +5,7 @@ export const usersService = {
   async list(companyId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, centers(name)')
       .eq('company_id', companyId)
       .is('deleted_at', null)
       .order('created_at');
@@ -34,7 +34,7 @@ export const usersService = {
     return data;
   },
 
-  async inviteUser({ email, name, role, companyId }, adminId) {
+  async inviteUser({ email, name, role, companyId, centerId }, adminId) {
     // Cria um client temporário para não deslogar o admin atual
     const { createClient } = await import('@supabase/supabase-js');
     const tempClient = createClient(
@@ -43,13 +43,13 @@ export const usersService = {
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
-    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+    const tempPassword = 'espazio123';
     
     const { data, error } = await tempClient.auth.signUp({
       email,
       password: tempPassword,
       options: {
-        data: { name, role, company_id: companyId }
+        data: { name, role, company_id: companyId, center_id: centerId }
       }
     });
 
@@ -60,7 +60,7 @@ export const usersService = {
       user_id: adminId,
       action: 'create',
       entity_type: 'profiles',
-      metadata: { email, role },
+      metadata: { email, role, center_id: centerId },
     });
 
     return data;

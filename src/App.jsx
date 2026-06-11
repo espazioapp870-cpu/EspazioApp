@@ -12,6 +12,7 @@ import Products from './pages/Products';
 import Reports from './pages/Reports';
 import History from './pages/History';
 import Admin from './pages/Admin';
+import ChangePassword from './pages/ChangePassword';
 
 export default function App() {
   return (
@@ -21,6 +22,9 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             
+            <Route element={<ProtectedRoute requirePasswordChange />}>
+              <Route path="/change-password" element={<ChangePassword />} />
+            </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/saida" element={<Outputs />} />

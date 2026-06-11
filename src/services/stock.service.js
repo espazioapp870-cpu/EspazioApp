@@ -4,17 +4,14 @@ import { supabase } from './supabase';
 export const stockService = {
   /**
    * Registra saída de estoque
-   * O trigger fn_apply_stock_output no banco garante:
-   *  - bloqueio pessimista (FOR UPDATE)
-   *  - validação de estoque negativo
-   *  - atualização do current_stock
-   *  - log automático
+   * O trigger fn_apply_stock_output no banco garante a atualização
    */
-  async registerOutput({ companyId, productId, employeeId, userId, quantity, notes }) {
+  async registerOutput({ companyId, centerId, productId, employeeId, userId, quantity, notes }) {
     const { data, error } = await supabase
       .from('stock_outputs')
       .insert({
         company_id: companyId,
+        center_id: centerId,
         product_id: productId,
         employee_id: employeeId,
         user_id: userId,
@@ -30,15 +27,14 @@ export const stockService = {
 
   /**
    * Registra entrada de estoque
-   * O trigger fn_apply_stock_entry no banco garante:
-   *  - atualização do current_stock
-   *  - log automático
+   * O trigger fn_apply_stock_entry no banco garante a atualização
    */
-  async registerEntry({ companyId, productId, userId, quantity, notes }) {
+  async registerEntry({ companyId, centerId, productId, userId, quantity, notes }) {
     const { data, error } = await supabase
       .from('stock_entries')
       .insert({
         company_id: companyId,
+        center_id: centerId,
         product_id: productId,
         user_id: userId,
         quantity,
@@ -54,14 +50,20 @@ export const stockService = {
   /**
    * Histórico de movimentações (view unificada)
    */
-  async getHistory(companyId, { page = 0, pageSize = 30 } = {}) {
-    const { data, error } = await supabase
+  async getHistory(companyId, centerId, { page = 0, pageSize = 30 } = {}) {
+    let query = supabase
       .from('v_recent_movements')
       .select('*')
       .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1);
+      .order('created_at', { ascending: false });
 
+    if (centerId) {
+      query = query.eq('center_id', centerId);
+    }
+
+    query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
@@ -69,13 +71,17 @@ export const stockService = {
   /**
    * Relatório de saídas com filtros
    */
-  async getOutputsReport(companyId, { startDate, endDate, productName, userName } = {}) {
+  async getOutputsReport(companyId, centerId, { startDate, endDate, productName, userName } = {}) {
     let query = supabase
       .from('v_recent_movements')
       .select('*')
       .eq('company_id', companyId)
       .eq('type', 'output')
       .order('created_at', { ascending: false });
+
+    if (centerId) {
+      query = query.eq('center_id', centerId);
+    }
 
     if (startDate) query = query.gte('created_at', startDate);
     if (endDate)   query = query.lte('created_at', endDate);
@@ -90,11 +96,15 @@ export const stockService = {
   /**
    * Top produtos mais retirados no período
    */
-  async getTopProducts(companyId, { startDate, endDate } = {}) {
+  async getTopProducts(companyId, centerId, { startDate, endDate } = {}) {
     let query = supabase
       .from('stock_outputs')
       .select('product_id, quantity, products(name)')
       .eq('company_id', companyId);
+
+    if (centerId) {
+      query = query.eq('center_id', centerId);
+    }
 
     if (startDate) query = query.gte('created_at', startDate);
     if (endDate)   query = query.lte('created_at', endDate);
@@ -116,11 +126,15 @@ export const stockService = {
   /**
    * Contagem de transações no período
    */
-  async getPeriodStats(companyId, { startDate, endDate } = {}) {
+  async getPeriodStats(companyId, centerId, { startDate, endDate } = {}) {
     let qOutputs = supabase
       .from('stock_outputs')
       .select('quantity')
       .eq('company_id', companyId);
+
+    if (centerId) {
+      qOutputs = qOutputs.eq('center_id', centerId);
+    }
 
     if (startDate) qOutputs = qOutputs.gte('created_at', startDate);
     if (endDate)   qOutputs = qOutputs.lte('created_at', endDate);

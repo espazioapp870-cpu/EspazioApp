@@ -5,7 +5,7 @@ import Spinner from '../ui/Spinner';
 import Header from './Header';
 import BottomNav from './BottomNav';
 
-export default function ProtectedRoute({ adminOnly = false }) {
+export default function ProtectedRoute({ adminOnly = false, requirePasswordChange = false }) {
   const { user, profile, loading, isAdmin } = useAuth();
 
   if (loading) {
@@ -21,8 +21,17 @@ export default function ProtectedRoute({ adminOnly = false }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (profile.needs_password_reset && !requirePasswordChange) {
+    return <Navigate to="/change-password" replace />;
+  }
+
   if (adminOnly && !isAdmin) {
     return <Navigate to="/" replace />;
+  }
+
+  // Se estamos na tela de mudar a senha, não mostra Header e BottomNav
+  if (requirePasswordChange) {
+    return <Outlet />;
   }
 
   return (

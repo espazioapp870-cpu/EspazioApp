@@ -8,7 +8,18 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
   const [company, setCompany] = useState(null);
+  const [centers, setCenters] = useState([]);
+  const [activeCenter, setActiveCenter] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  async function loadCenters(companyId, defaultCenterId) {
+    const { data: list } = await supabase.from('centers').select('*').eq('company_id', companyId).eq('active', true).order('name');
+    if (list && list.length > 0) {
+      setCenters(list);
+      const initial = list.find(c => c.id === defaultCenterId) || list[0];
+      setActiveCenter(initial);
+    }
+  }
 
   async function loadProfile(userId) {
     const { data: prof, error } = await supabase
@@ -20,10 +31,12 @@ export function AuthProvider({ children }) {
     if (prof) {
       setProfile(prof);
       setCompany(prof.companies);
+      await loadCenters(prof.company_id, prof.center_id);
     } else {
-      // Evita o loop se o perfil não existir
       setProfile(null);
       setCompany(null);
+      setCenters([]);
+      setActiveCenter(null);
     }
   }
 
@@ -38,7 +51,7 @@ export function AuthProvider({ children }) {
       async (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) await loadProfile(session.user.id);
-        else { setProfile(null); setCompany(null); }
+        else { setProfile(null); setCompany(null); setCenters([]); setActiveCenter(null); }
       }
     );
 
@@ -76,6 +89,9 @@ export function AuthProvider({ children }) {
     user,
     profile,
     company,
+    centers,
+    activeCenter,
+    setActiveCenter,
     loading,
     role: profile?.role ?? null,
     isAdmin: profile?.role === 'administrator',

@@ -10,7 +10,7 @@ const RoleIcon = ({ role }) => {
 const roleLabel = { administrator: 'Admin', editor: 'Editor', viewer: 'Visualizador' };
 
 export default function Header() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, centers, activeCenter, setActiveCenter } = useAuth();
 
   return (
     <header className="app-header">
@@ -28,13 +28,26 @@ export default function Header() {
           </span>
         </div>
       </div>
-      <button className="header-logout" onClick={signOut} title="Sair">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <polyline points="16,17 21,12 16,7" />
-          <line x1="21" y1="12" x2="9" y2="12" />
-        </svg>
-      </button>
+      
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
+        {centers && centers.length > 0 && (
+          <select 
+            style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+            value={activeCenter?.id || ''}
+            onChange={(e) => setActiveCenter(centers.find(c => c.id === e.target.value))}
+            title="Selecionar Centro"
+          >
+            {centers.map(c => <option key={c.id} value={c.id}>📍 {c.name}</option>)}
+          </select>
+        )}
+        <button className="header-logout" onClick={signOut} title="Sair" style={{ marginLeft: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16,17 21,12 16,7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+      </div>
     </header>
   );
 }

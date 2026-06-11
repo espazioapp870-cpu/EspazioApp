@@ -9,7 +9,7 @@ import Modal from '../components/ui/Modal';
 import Spinner from '../components/ui/Spinner';
 
 export default function Products() {
-  const { profile, isEditor } = useAuth();
+  const { profile, activeCenter, isEditor } = useAuth();
   const toast = useToast();
   const [params] = useSearchParams();
   const filterAlerts = params.get('filtro') === 'alerta';
@@ -21,14 +21,15 @@ export default function Products() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', ca: '', category_id: '', current_stock: 0, minimum_stock: 5 });
+  const [formData, setFormData] = useState({ name: '', ca: '', size: 'N/A', category_id: '', current_stock: 0, minimum_stock: 5 });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
+        setLoading(true);
         const [prods, cats] = await Promise.all([
-          productsService.list(profile.company_id),
+          productsService.list(profile.company_id, activeCenter?.id),
           categoriesService.list(profile.company_id),
         ]);
         setProducts(prods);
@@ -39,8 +40,8 @@ export default function Products() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter]);
 
   const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.ca && p.ca.toLowerCase().includes(search.toLowerCase()));
@@ -50,13 +51,13 @@ export default function Products() {
 
   const openNew = () => {
     setEditingId(null);
-    setFormData({ name: '', ca: '', category_id: categories[0]?.id || '', current_stock: 0, minimum_stock: 5 });
+    setFormData({ name: '', ca: '', size: 'N/A', category_id: categories[0]?.id || '', current_stock: 0, minimum_stock: 5 });
     setIsModalOpen(true);
   };
 
   const openEdit = (p) => {
     setEditingId(p.id);
-    setFormData({ name: p.name, ca: p.ca || '', category_id: p.category_id || '', current_stock: p.current_stock, minimum_stock: p.minimum_stock });
+    setFormData({ name: p.name, ca: p.ca || '', size: p.size || 'N/A', category_id: p.category_id || '', current_stock: p.current_stock, minimum_stock: p.minimum_stock });
     setIsModalOpen(true);
   };
 
@@ -64,14 +65,16 @@ export default function Products() {
     if (!formData.name || !formData.category_id) return toast.error('Nome e categoria são obrigatórios');
     setSaving(true);
     try {
-      const payload = { ...formData, company_id: profile.company_id };
+      const payload = { name: formData.name, ca: formData.ca, size: formData.size, category_id: formData.category_id, company_id: profile.company_id };
+      const stockPayload = { current_stock: formData.current_stock, minimum_stock: formData.minimum_stock };
+      
       if (editingId) {
-        const updated = await productsService.update(editingId, payload, profile.id, profile.company_id);
-        setProducts(prev => prev.map(p => p.id === editingId ? { ...updated, categories: categories.find(c => c.id === updated.category_id) } : p));
+        const updated = await productsService.update(editingId, activeCenter.id, payload, stockPayload, profile.id, profile.company_id);
+        setProducts(prev => prev.map(p => p.id === editingId ? { ...updated, current_stock: stockPayload.current_stock, minimum_stock: stockPayload.minimum_stock, categories: categories.find(c => c.id === updated.category_id) } : p));
         toast.success('Produto atualizado!');
       } else {
-        const created = await productsService.create(payload, profile.id);
-        setProducts(prev => [...prev, { ...created, categories: categories.find(c => c.id === created.category_id) }].sort((a,b) => a.name.localeCompare(b.name)));
+        const created = await productsService.create(activeCenter.id, payload, stockPayload, profile.id);
+        setProducts(prev => [...prev, { ...created, current_stock: stockPayload.current_stock, minimum_stock: stockPayload.minimum_stock, categories: categories.find(c => c.id === created.category_id) }].sort((a,b) => a.name.localeCompare(b.name)));
         toast.success('Produto criado!');
       }
       setIsModalOpen(false);
@@ -129,7 +132,9 @@ export default function Products() {
                     {p.name}
                     {isLow && <svg className="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
                   </div>
-                  <div className="product-card-meta">CA: {p.ca || 'N/A'} • {p.categories?.name}</div>
+                  <div className="product-card-meta">
+                    CA: {p.ca || 'N/A'} • {p.categories?.name} • Tam: {p.size || 'N/A'}
+                  </div>
                 </div>
                 {isEditor && (
                   <div className="product-card-actions">
@@ -158,7 +163,7 @@ export default function Products() {
         })}
         {filtered.length === 0 && (
           <div className="empty-state">
-            <p>Nenhum produto encontrado.</p>
+            <p>Nenhum produto encontrado neste Centro.</p>
           </div>
         )}
       </div>
@@ -181,22 +186,52 @@ export default function Products() {
             <label className="form-label">CA (Opcional)</label>
             <input className="form-input" value={formData.ca} onChange={e => setFormData({...formData, ca: e.target.value})} placeholder="Ex: 12345" />
           </div>
+
           <div className="form-group">
             <label className="form-label">Categoria</label>
-            <select className="form-input" value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value})}>
-              <option value="">Selecione...</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          {!editingId && (
-            <div className="form-group">
-              <label className="form-label">Estoque Inicial</label>
-              <input type="number" className="form-input" value={formData.current_stock} onChange={e => setFormData({...formData, current_stock: Number(e.target.value)})} min="0" />
+            <div className="role-pills" style={{ flexWrap: 'wrap', gap: '8px', padding: '4px' }}>
+              {categories.map(c => (
+                <button 
+                  key={c.id} 
+                  type="button"
+                  className={`role-pill ${formData.category_id === c.id ? 'active' : ''}`}
+                  onClick={() => setFormData({...formData, category_id: c.id})}
+                  style={formData.category_id === c.id ? { background: '#f97316', color: '#fff' } : {}}
+                >
+                  {c.name}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+
           <div className="form-group">
-            <label className="form-label">Estoque Mínimo (Alerta)</label>
-            <input type="number" className="form-input" value={formData.minimum_stock} onChange={e => setFormData({...formData, minimum_stock: Number(e.target.value)})} min="0" />
+            <label className="form-label">Tamanho</label>
+            <div className="role-pills" style={{ flexWrap: 'wrap', gap: '8px', padding: '4px' }}>
+              {['P', 'M', 'G', 'GG', 'N/A'].map(sz => (
+                <button 
+                  key={sz} 
+                  type="button"
+                  className={`role-pill ${formData.size === sz ? 'active' : ''}`}
+                  onClick={() => setFormData({...formData, size: sz})}
+                  style={formData.size === sz ? { background: '#f97316', color: '#fff' } : {}}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+            {!editingId && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Estoque Inicial</label>
+                <input type="number" className="form-input" value={formData.current_stock} onChange={e => setFormData({...formData, current_stock: Number(e.target.value)})} min="0" />
+              </div>
+            )}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Estoque Mínimo</label>
+              <input type="number" className="form-input" value={formData.minimum_stock} onChange={e => setFormData({...formData, minimum_stock: Number(e.target.value)})} min="0" />
+            </div>
           </div>
         </Modal>
       )}
