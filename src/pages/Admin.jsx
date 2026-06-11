@@ -31,6 +31,7 @@ export default function Admin() {
   const [categoryForm, setCategoryForm] = useState({ name: '' });
   const [centerForm, setCenterForm] = useState({ name: '' });
   const [saving, setSaving] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -92,6 +93,21 @@ export default function Admin() {
       toast.success('Senha resetada para espazio123 com sucesso!');
     } catch (err) {
       toast.error('Erro ao resetar senha: ' + err.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setSaving(true);
+    try {
+      await usersService.deactivate(userToDelete.id, profile.id, profile.company_id);
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      toast.success('Usuário excluído permanentemente');
+      setUserToDelete(null);
+    } catch (err) {
+      toast.error('Erro ao excluir usuário');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -202,9 +218,14 @@ export default function Admin() {
                   ))}
                 </div>
                 {u.id !== profile.id && (
-                  <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
-                    Resetar Senha
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
+                      Resetar Senha
+                    </button>
+                    <button className="btn" style={{ padding: '4px 8px', fontSize: '12px', background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)' }} onClick={() => setUserToDelete(u)}>
+                      Excluir
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -289,6 +310,20 @@ export default function Admin() {
           <div className="form-group">
             <label className="form-label">Nome ou Código</label>
             <input className="form-input" value={centerForm.name} onChange={e => setCenterForm({ name: e.target.value })} placeholder="Ex: C235" />
+          </div>
+        </Modal>
+      )}
+
+      {userToDelete && (
+        <Modal title="Excluir Usuário" onClose={() => setUserToDelete(null)} footer={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className="btn btn-outline" onClick={() => setUserToDelete(null)} disabled={saving}>Não</button>
+            <button className="btn" style={{ background: '#ff4444', color: '#fff', border: 'none' }} onClick={handleDeleteUser} disabled={saving}>{saving ? <Spinner size={24} /> : 'Sim, excluir'}</button>
+          </div>
+        }>
+          <div style={{ padding: '16px 0', textAlign: 'center' }}>
+            <p>Tem certeza que deseja excluir o usuário <strong>{userToDelete.name}</strong>?</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '8px' }}>Esta ação apagará o acesso permanentemente e não pode ser desfeita.</p>
           </div>
         </Modal>
       )}

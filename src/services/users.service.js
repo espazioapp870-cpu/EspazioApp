@@ -64,10 +64,9 @@ export const usersService = {
   },
 
   async deactivate(userId, adminId, companyId) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ active: false, deleted_at: new Date().toISOString() })
-      .eq('id', userId);
+    const { error } = await supabase.rpc('admin_delete_user', {
+      p_target_user_id: userId
+    });
     if (error) throw error;
 
     await supabase.from('activity_logs').insert({
