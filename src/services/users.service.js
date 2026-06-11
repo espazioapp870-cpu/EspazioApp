@@ -73,6 +73,19 @@ export const usersService = {
 
     if (error) throw error;
 
+    // Garantir que o profile foi criado corretamente com company_id e center_id
+    if (data.user?.id) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email,
+        name,
+        role,
+        company_id: companyId,
+        center_id: centerId,
+        is_superadmin: false,
+      }, { onConflict: 'id' });
+    }
+
     await supabase.from('activity_logs').insert({
       company_id: companyId,
       user_id: adminId,
