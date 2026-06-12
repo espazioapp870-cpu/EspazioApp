@@ -13,6 +13,11 @@ const periods = [
   { id: 'all', label: 'Todos' },
 ];
 
+function formatDate(iso) {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function Reports() {
   const { profile, activeCenter } = useAuth();
   const toast = useToast();
@@ -20,6 +25,7 @@ export default function Reports() {
   const [period, setPeriod] = useState('week');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -54,6 +60,125 @@ export default function Reports() {
     toast.success('Relatório copiado para a área de transferência!');
   };
 
+  const handleExportPDF = async () => {
+    if (!data) return;
+    setExporting(true);
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+
+      // Cabeçalho escuro
+      doc.setFillColor(10, 10, 26);
+      doc.rect(0, 0, pageW, 32, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ESPAZIO', 14, 14);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(160, 160, 200);
+      doc.text('Gestão Inteligente de Estoque', 14, 20);
+      doc.setFontSize(9);
+      doc.setTextColor(200, 200, 255);
+      doc.text(`Centro: ${activeCenter?.name || '-'}`, 14, 27);
+      doc.text(`Período: ${data.label}`, pageW - 14, 27, { align: 'right' });
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 150);
+      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}   |   Por: ${profile?.name || ''}`, 14, 35);
+
+      // KPIs
+      const kpiY = 42;
+      const kpiW = (pageW - 28) / 3;
+      const kpis = [
+        { label: 'Itens Saíram', value: String(data.stats.totalQty) },
+        { label: 'Retiradas', value: String(data.stats.totalTransactions) },
+        { label: 'Itens/Retirada', value: data.stats.totalTransactions ? (data.stats.totalQty / data.stats.totalTransactions).toFixed(1) : '0' },
+      ];
+      kpis.forEach((k, i) => {
+        const x = 14 + i * (kpiW + 4);
+        doc.setFillColor(20, 20, 40);
+        doc.roundedRect(x, kpiY, kpiW, 18, 2, 2, 'F');
+        doc.setTextColor(120, 120, 180);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(k.label, x + kpiW / 2, kpiY + 6, { align: 'center' });
+        doc.setTextColor(80, 130, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(k.value, x + kpiW / 2, kpiY + 14, { align: 'center' });
+      });
+
+      // Top Produtos
+      let cursorY = kpiY + 26;
+      if (data.top.length > 0) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(80, 130, 255);
+        doc.text('Mais Retirados', 14, cursorY);
+        cursorY += 3;
+        autoTable(doc, {
+          startY: cursorY,
+          head: [['#', 'Produto', 'Total (un)']],
+          body: data.top.map((p, i) => [i + 1, p.name, p.total]),
+          styles: { fontSize: 8, cellPadding: 2, textColor: [220, 220, 240], fillColor: [18, 18, 35] },
+          headStyles: { fillColor: [30, 40, 80], textColor: [150, 180, 255], fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [22, 22, 42] },
+          columnStyles: { 0: { cellWidth: 12 }, 2: { cellWidth: 22, halign: 'right' } },
+          margin: { left: 14, right: 14 },
+        });
+        cursorY = doc.lastAutoTable.finalY + 8;
+      }
+
+      // Tabela detalhada
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 130, 255);
+      doc.text('Movimentações Detalhadas', 14, cursorY);
+      cursorY += 3;
+
+      const rows = data.outputs.map(o => [
+        formatDate(o.created_at),
+        o.product_name || '-',
+        o.employee_name || '-',
+        o.user_name || '-',
+        String(o.quantity),
+        o.notes || '',
+      ]);
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Data/Hora', 'Produto', 'Funcionário', 'Registrado por', 'Qtd', 'Obs']],
+        body: rows.length > 0 ? rows : [['', 'Nenhuma saída no período', '', '', '', '']],
+        styles: { fontSize: 7, cellPadding: 2, textColor: [210, 210, 230], fillColor: [18, 18, 35], overflow: 'linebreak' },
+        headStyles: { fillColor: [30, 40, 80], textColor: [150, 180, 255], fontStyle: 'bold', fontSize: 7 },
+        alternateRowStyles: { fillColor: [22, 22, 42] },
+        columnStyles: { 0: { cellWidth: 28 }, 4: { cellWidth: 10, halign: 'right' }, 5: { cellWidth: 30 } },
+        margin: { left: 14, right: 14 },
+      });
+
+      // Rodapé em todas as páginas
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 100);
+        doc.text(`ESPAZIO — Página ${i} de ${pageCount}`, pageW / 2, 292, { align: 'center' });
+      }
+
+      const filename = `ESPAZIO_${activeCenter?.name || 'Relatorio'}_${data.label.replace(/\s/g, '_')}.pdf`;
+      doc.save(filename);
+      toast.success('PDF gerado com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <>
       <h1 className="page-title">Relatórios</h1>
@@ -79,6 +204,22 @@ export default function Reports() {
         <button className="export-btn export" onClick={handleExportText}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           Copiar Texto
+        </button>
+        <button
+          className="export-btn"
+          onClick={handleExportPDF}
+          disabled={exporting || !data}
+          style={{ background: 'rgba(220,50,50,0.15)', border: '1px solid rgba(220,50,50,0.3)', color: '#ff6b6b', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          {exporting ? <Spinner size={16} /> : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9,15 12,18 15,15"/>
+            </svg>
+          )}
+          Exportar PDF
         </button>
       </div>
 
