@@ -27,10 +27,13 @@ export default function App() {
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/relatorios" element={<Reports />} />
+            </Route>
+
+            <Route element={<ProtectedRoute editorOnly />}>
               <Route path="/saida" element={<Outputs />} />
               <Route path="/entrada" element={<Entries />} />
               <Route path="/produtos" element={<Products />} />
-              <Route path="/relatorios" element={<Reports />} />
               <Route path="/historico" element={<History />} />
             </Route>
 

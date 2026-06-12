@@ -5,8 +5,8 @@ import Spinner from '../ui/Spinner';
 import Header from './Header';
 import BottomNav from './BottomNav';
 
-export default function ProtectedRoute({ adminOnly = false, requirePasswordChange = false }) {
-  const { user, profile, loading, isAdmin } = useAuth();
+export default function ProtectedRoute({ adminOnly = false, editorOnly = false, requirePasswordChange = false }) {
+  const { user, profile, loading, isAdmin, isEditor } = useAuth();
 
   if (loading) {
     return (
@@ -26,6 +26,10 @@ export default function ProtectedRoute({ adminOnly = false, requirePasswordChang
   }
 
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (editorOnly && !isEditor) {
     return <Navigate to="/" replace />;
   }
 

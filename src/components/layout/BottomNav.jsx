@@ -45,7 +45,7 @@ const AdminIcon = () => (
 );
 
 export default function BottomNav() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isEditor } = useAuth();
 
   const navClass = ({ isActive }) => `nav-item${isActive ? ' active' : ''}`;
 
@@ -54,21 +54,29 @@ export default function BottomNav() {
       <NavLink to="/" end className={navClass}>
         <HomeIcon /><span>Início</span>
       </NavLink>
-      <NavLink to="/saida" className={navClass}>
-        <OutIcon /><span>Saída</span>
-      </NavLink>
-      <NavLink to="/entrada" className={navClass}>
-        <InIcon /><span>Entrada</span>
-      </NavLink>
-      <NavLink to="/produtos" className={navClass}>
-        <BoxIcon /><span>Produtos</span>
-      </NavLink>
+      {isEditor && (
+        <NavLink to="/saida" className={navClass}>
+          <OutIcon /><span>Saída</span>
+        </NavLink>
+      )}
+      {isEditor && (
+        <NavLink to="/entrada" className={navClass}>
+          <InIcon /><span>Entrada</span>
+        </NavLink>
+      )}
+      {isEditor && (
+        <NavLink to="/produtos" className={navClass}>
+          <BoxIcon /><span>Produtos</span>
+        </NavLink>
+      )}
       <NavLink to="/relatorios" className={navClass}>
         <ReportIcon /><span>Relatórios</span>
       </NavLink>
-      <NavLink to="/historico" className={navClass}>
-        <HistoryIcon /><span>Histórico</span>
-      </NavLink>
+      {isEditor && (
+        <NavLink to="/historico" className={navClass}>
+          <HistoryIcon /><span>Histórico</span>
+        </NavLink>
+      )}
       {isAdmin && (
         <NavLink to="/admin" className={navClass}>
           <AdminIcon /><span>Admin</span>

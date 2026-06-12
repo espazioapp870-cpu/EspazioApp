@@ -314,7 +314,7 @@ export default function Admin() {
             <select className="form-input" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value})}>
               {profile?.is_superadmin && <option value="administrator">Administrador (Tudo)</option>}
               <option value="editor">Editor (Cadastros)</option>
-              <option value="viewer">Visualizador (Saídas/Entradas)</option>
+              <option value="viewer">Visualizador (Somente Relatórios)</option>
             </select>
           </div>
           {profile?.is_superadmin && (
