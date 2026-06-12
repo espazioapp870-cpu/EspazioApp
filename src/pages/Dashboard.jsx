@@ -6,7 +6,7 @@ import { productsService } from '../services/products.service';
 import Spinner from '../components/ui/Spinner';
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, activeCenter } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [lowStock, setLowStock] = useState([]);
@@ -16,8 +16,8 @@ export default function Dashboard() {
     async function load() {
       try {
         const [st, low] = await Promise.all([
-          productsService.getDashboardStats(profile.company_id),
-          productsService.listLowStock(profile.company_id),
+          productsService.getDashboardStats(profile.company_id, activeCenter?.id),
+          productsService.listLowStock(profile.company_id, activeCenter?.id),
         ]);
         setStats(st);
         setLowStock(low);
@@ -27,8 +27,8 @@ export default function Dashboard() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter]);
 
   if (loading) return <div className="loading-screen"><Spinner /></div>;
 

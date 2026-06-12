@@ -33,7 +33,7 @@ export default function Outputs() {
     async function load() {
       try {
         const [prods, emps] = await Promise.all([
-          productsService.list(profile.company_id),
+          productsService.list(profile.company_id, activeCenter?.id),
           employeesService.list(profile.company_id),
         ]);
         setProducts(prods);
@@ -44,8 +44,8 @@ export default function Outputs() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter]);
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchProd.toLowerCase()) || 

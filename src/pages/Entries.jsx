@@ -26,7 +26,7 @@ export default function Entries() {
   useEffect(() => {
     async function load() {
       try {
-        const prods = await productsService.list(profile.company_id);
+        const prods = await productsService.list(profile.company_id, activeCenter?.id);
         setProducts(prods);
       } catch (error) {
         toast.error('Erro ao carregar produtos');
@@ -34,8 +34,8 @@ export default function Entries() {
         setLoading(false);
       }
     }
-    if (profile) load();
-  }, [profile]);
+    if (profile && activeCenter) load();
+  }, [profile, activeCenter]);
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchProd.toLowerCase()) || 
