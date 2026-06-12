@@ -1,14 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- iOS PWA: abre como app nativo, sem barra de endereço -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ESPAZIO" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Android PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <!-- Ícones -->
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+
+    <!-- SEO / OG -->
+    <title>ESPAZIO</title>
+    <meta name="description" content="Gestão Inteligente de Estoque de EPIs" />
     <meta property="og:title" content="ESPAZIO - Gestão de Estoque" />
     <meta property="og:description" content="Gestão Inteligente de Estoque" />
-    <meta property="og:image" content="/logo.png" />
-    <title>ESPAZIO</title>
+    <meta property="og:image" content="/icon-512.png" />
   </head>
   <body>
     <div id="root"></div>
