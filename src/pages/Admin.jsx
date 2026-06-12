@@ -38,7 +38,7 @@ export default function Admin() {
       setLoading(true);
       try {
         const [u, c, cntrs] = await Promise.all([
-          usersService.list(profile.company_id),
+          usersService.list(profile.company_id, profile.is_superadmin ? null : profile.center_id),
           categoriesService.list(profile.company_id),
           supabase.from('centers').select('*').eq('company_id', profile.company_id).eq('active', true).order('name')
         ]);
@@ -86,7 +86,7 @@ export default function Admin() {
       await usersService.inviteUser({ ...userForm, companyId: profile.company_id }, profile.id);
       toast.success('Usuário criado! A senha padrão é espazio123');
       setIsUserModalOpen(false);
-      const data = await usersService.list(profile.company_id);
+      const data = await usersService.list(profile.company_id, profile.is_superadmin ? null : profile.center_id);
       setUsers(data);
     } catch (err) {
       toast.error(err.message || 'Erro ao convidar usuário');

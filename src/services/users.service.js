@@ -9,13 +9,19 @@ async function tryLog(payload) {
 }
 
 export const usersService = {
-  async list(companyId) {
-    const { data, error } = await supabase
+  async list(companyId, centerId = null) {
+    let query = supabase
       .from('profiles')
       .select('*, centers(name)')
       .eq('company_id', companyId)
       .is('deleted_at', null)
       .order('created_at');
+      
+    if (centerId) {
+      query = query.eq('center_id', centerId);
+    }
+    
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
