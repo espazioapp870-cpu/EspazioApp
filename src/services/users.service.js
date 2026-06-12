@@ -1,6 +1,13 @@
 // src/services/users.service.js
 import { supabase } from './supabase';
 
+// Helper para tentar inserir log sem bloquear se RLS negar
+async function tryLog(payload) {
+  try {
+    await supabase.from('activity_logs').insert(payload);
+  } catch (_) { /* ignora silenciosamente */ }
+}
+
 export const usersService = {
   async list(companyId) {
     const { data, error } = await supabase
@@ -21,16 +28,7 @@ export const usersService = {
       .select()
       .single();
     if (error) throw error;
-
-    await supabase.from('activity_logs').insert({
-      company_id: companyId,
-      user_id: adminId,
-      action: 'role_change',
-      entity_type: 'profiles',
-      entity_id: userId,
-      metadata: { new_role: role },
-    });
-
+    await tryLog({ company_id: companyId, user_id: adminId, action: 'role_change', entity_type: 'profiles', entity_id: userId, metadata: { new_role: role } });
     return data;
   },
 
@@ -42,16 +40,7 @@ export const usersService = {
       .select()
       .single();
     if (error) throw error;
-
-    await supabase.from('activity_logs').insert({
-      company_id: companyId,
-      user_id: adminId,
-      action: 'role_change',
-      entity_type: 'profiles',
-      entity_id: userId,
-      metadata: { new_superadmin: isSuperAdmin },
-    });
-
+    await tryLog({ company_id: companyId, user_id: adminId, action: 'role_change', entity_type: 'profiles', entity_id: userId, metadata: { new_superadmin: isSuperAdmin } });
     return data;
   },
 
@@ -72,26 +61,43 @@ export const usersService = {
     });
 
     if (error) throw error;
+    if (!data.user?.id) throw new Error('Usuário não criado');
 
-    // Garantir o profile via RPC (bypassa RLS)
-    if (data.user?.id) {
-      await supabase.rpc('admin_ensure_profile', {
-        p_user_id:    data.user.id,
-        p_email:      email,
-        p_name:       name,
-        p_role:       role,
-        p_company_id: companyId,
-        p_center_id:  centerId,
-      });
+    // Tentativa 1: RPC SECURITY DEFINER (bypassa RLS)
+    const { error: rpcErr } = await supabase.rpc('admin_ensure_profile', {
+      p_user_id:    data.user.id,
+      p_email:      email,
+      p_name:       name,
+      p_role:       role,
+      p_company_id: companyId,
+      p_center_id:  centerId,
+    });
+
+    if (rpcErr) {
+      console.warn('admin_ensure_profile falhou, tentando fallback:', rpcErr.message);
+      // Tentativa 2: upsert direto (funciona se RLS não bloquear ou após migration)
+      const { error: upsertErr } = await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email,
+        name,
+        role,
+        company_id: companyId,
+        center_id:  centerId,
+        is_superadmin: false,
+      }, { onConflict: 'id' });
+
+      if (upsertErr) {
+        // Tentativa 3: apenas UPDATE (se o trigger já criou o registro, atualiza)
+        await supabase.from('profiles').update({
+          name,
+          role,
+          company_id: companyId,
+          center_id:  centerId,
+        }).eq('id', data.user.id);
+      }
     }
 
-    await supabase.from('activity_logs').insert({
-      company_id: companyId,
-      user_id: adminId,
-      action: 'create',
-      entity_type: 'profiles',
-      metadata: { email, role, center_id: centerId },
-    });
+    await tryLog({ company_id: companyId, user_id: adminId, action: 'create', entity_type: 'profiles', metadata: { email, role, center_id: centerId } });
 
     return data;
   },
@@ -101,13 +107,6 @@ export const usersService = {
       p_target_user_id: userId
     });
     if (error) throw error;
-
-    await supabase.from('activity_logs').insert({
-      company_id: companyId,
-      user_id: adminId,
-      action: 'delete',
-      entity_type: 'profiles',
-      entity_id: userId,
-    });
+    await tryLog({ company_id: companyId, user_id: adminId, action: 'delete', entity_type: 'profiles', entity_id: userId });
   },
 };
