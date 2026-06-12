@@ -51,7 +51,7 @@ export default function Products() {
 
   const openNew = () => {
     setEditingId(null);
-    setFormData({ name: '', ca: '', size: 'N/A', category_id: categories[0]?.id || '', current_stock: 0, minimum_stock: 5 });
+    setFormData({ name: '', ca: '', size: 'N/A', category_id: categories[0]?.id || '', current_stock: '', minimum_stock: '' });
     setIsModalOpen(true);
   };
 
@@ -66,7 +66,7 @@ export default function Products() {
     setSaving(true);
     try {
       const payload = { name: formData.name, ca: formData.ca, size: formData.size, category_id: formData.category_id, company_id: profile.company_id };
-      const stockPayload = { current_stock: formData.current_stock, minimum_stock: formData.minimum_stock };
+      const stockPayload = { current_stock: Number(formData.current_stock) || 0, minimum_stock: Number(formData.minimum_stock) || 0 };
       
       if (editingId) {
         const updated = await productsService.update(editingId, activeCenter.id, payload, stockPayload, profile.id, profile.company_id);
@@ -225,12 +225,12 @@ export default function Products() {
             {!editingId && (
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Estoque Inicial</label>
-                <input type="number" className="form-input" value={formData.current_stock} onChange={e => setFormData({...formData, current_stock: Number(e.target.value)})} min="0" />
+                <input type="number" className="form-input" value={formData.current_stock} onChange={e => setFormData({...formData, current_stock: e.target.value === '' ? '' : Number(e.target.value)})} min="0" />
               </div>
             )}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Estoque Mínimo</label>
-              <input type="number" className="form-input" value={formData.minimum_stock} onChange={e => setFormData({...formData, minimum_stock: Number(e.target.value)})} min="0" />
+              <input type="number" className="form-input" value={formData.minimum_stock} onChange={e => setFormData({...formData, minimum_stock: e.target.value === '' ? '' : Number(e.target.value)})} min="0" />
             </div>
           </div>
         </Modal>
