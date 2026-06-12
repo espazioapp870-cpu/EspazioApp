@@ -67,12 +67,31 @@ export default function Outputs() {
   };
 
   const handleConfirm = async () => {
-    if (!selectedEmployee) {
-      toast.error('Selecione o funcionário');
+    let finalEmployee = selectedEmployee;
+
+    if (!finalEmployee && searchEmp.trim()) {
+      setSubmitting(true);
+      try {
+        finalEmployee = await employeesService.create({
+          name: searchEmp.trim(),
+          company_id: profile.company_id,
+          active: true
+        }, profile.id);
+      } catch (err) {
+        toast.error('Erro ao criar novo funcionário');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    if (!finalEmployee) {
+      toast.error('Selecione ou digite o nome do funcionário');
       return;
     }
+
     if (quantity > selectedProduct.current_stock) {
       toast.error('Quantidade maior que o estoque disponível!');
+      setSubmitting(false);
       return;
     }
 
@@ -82,7 +101,7 @@ export default function Outputs() {
         companyId: profile.company_id,
         centerId: activeCenter?.id,
         productId: selectedProduct.id,
-        employeeId: selectedEmployee.id,
+        employeeId: finalEmployee.id,
         userId: profile.id,
         quantity,
         notes
