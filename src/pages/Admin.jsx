@@ -14,6 +14,7 @@ export default function Admin() {
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'categories', 'centers'
+  const [filterCenterId, setFilterCenterId] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
   // Data
@@ -207,64 +208,75 @@ export default function Admin() {
       </div>
 
       {activeTab === 'users' && (
-        <div className="user-list">
-          {users.map(u => (
-            <div key={u.id} className="user-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div className="user-card-name">{u.name} {u.id === profile.id ? '(Você)' : ''}</div>
-                <div className="user-card-email">{u.email} • {u.centers?.name}</div>
-                <div className="user-card-since">{formatSince(u.created_at)}</div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                {/* Role pills: Admin normal não mexe nas pills do Super Admin */}
-                {(!u.is_superadmin || profile?.is_superadmin) && (
-                  <div className="role-pills">
-                    {['administrator', 'editor', 'viewer'].map(role => {
-                      if (role === 'administrator' && !profile?.is_superadmin) return null;
-                      return (
-                        <button
-                          key={role}
-                          className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
-                          onClick={() => u.id !== profile.id && !u.is_superadmin && handleRoleChange(u.id, role)}
-                          disabled={u.id === profile.id || (u.is_superadmin && !profile?.is_superadmin)}
-                        >
-                          {roleLabelShort(role)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {/* Tag visual para Super Admin quando visto por admin normal */}
-                {u.is_superadmin && !profile?.is_superadmin && (
-                  <span style={{ fontSize: '11px', color: 'goldenrod', fontWeight: 700, padding: '2px 8px', border: '1px solid goldenrod', borderRadius: '20px' }}>★ Super Admin</span>
-                )}
-                {u.id !== profile.id && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Resetar e Excluir: só visíveis para o próprio SuperAdmin, ou para admins normais sobre usuários NÃO super admin */}
-                    {(!u.is_superadmin || profile?.is_superadmin) && (
-                      <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleResetPassword(u.id)}>
-                        Resetar Senha
-                      </button>
-                    )}
-                    {profile?.is_superadmin && (
-                      <button 
-                        style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '20px', border: `1px solid ${u.is_superadmin ? 'goldenrod' : 'var(--border)'}`, background: u.is_superadmin ? 'rgba(218,165,32,0.15)' : 'transparent', color: u.is_superadmin ? 'goldenrod' : 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
-                        onClick={() => handleSuperAdminToggle(u.id, !u.is_superadmin)}
-                      >
-                        {u.is_superadmin ? '★ Super Admin' : '☆ Tornar Super Admin'}
-                      </button>
-                    )}
-                    {(!u.is_superadmin || profile?.is_superadmin) && (
-                      <button className="btn" style={{ padding: '4px 8px', fontSize: '12px', background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)' }} onClick={() => setUserToDelete(u)}>
-                        Excluir
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+        <div className="user-list-container">
+          {profile?.is_superadmin && centers.length > 0 && (
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <select className="form-input" value={filterCenterId} onChange={e => setFilterCenterId(e.target.value)} style={{ padding: '8px 12px', fontSize: '14px' }}>
+                <option value="ALL">Todos os Centros</option>
+                {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-          ))}
+          )}
+          <div className="user-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {users.filter(u => filterCenterId === 'ALL' || u.center_id === filterCenterId).map(u => (
+              <div key={u.id} className="user-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="user-card-name" style={{ fontSize: '14px', marginBottom: '2px' }}>{u.name} {u.id === profile.id ? '(Você)' : ''}</div>
+                    <div className="user-card-email" style={{ fontSize: '11px', marginBottom: '2px' }}>{u.email} • {u.centers?.name}</div>
+                    <div className="user-card-since" style={{ fontSize: '10px', marginBottom: 0 }}>Desde {formatSince(u.created_at)}</div>
+                  </div>
+                  {u.is_superadmin && !profile?.is_superadmin && (
+                    <span style={{ fontSize: '10px', color: 'goldenrod', fontWeight: 700, padding: '2px 6px', border: '1px solid goldenrod', borderRadius: '12px' }}>★ Super Admin</span>
+                  )}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {(!u.is_superadmin || profile?.is_superadmin) && (
+                    <div className="role-pills" style={{ display: 'flex', gap: '4px' }}>
+                      {['administrator', 'editor', 'viewer'].map(role => {
+                        if (role === 'administrator' && !profile?.is_superadmin) return null;
+                        return (
+                          <button
+                            key={role}
+                            className={`role-pill ${u.role === role ? `active ${role}` : ''}`}
+                            style={{ padding: '6px 4px', fontSize: '11px', flex: 1, textAlign: 'center' }}
+                            onClick={() => u.id !== profile.id && !u.is_superadmin && handleRoleChange(u.id, role)}
+                            disabled={u.id === profile.id || (u.is_superadmin && !profile?.is_superadmin)}
+                          >
+                            {roleLabelShort(role)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {u.id !== profile.id && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {(!u.is_superadmin || profile?.is_superadmin) && (
+                        <button className="btn btn-outline" style={{ padding: '6px 4px', fontSize: '11px', flex: 1, minHeight: 'auto' }} onClick={() => handleResetPassword(u.id)}>
+                          Resetar
+                        </button>
+                      )}
+                      {profile?.is_superadmin && (
+                        <button 
+                          style={{ padding: '6px 4px', fontSize: '11px', flex: 1, borderRadius: 'var(--radius)', border: `1px solid ${u.is_superadmin ? 'goldenrod' : 'var(--border)'}`, background: u.is_superadmin ? 'rgba(218,165,32,0.15)' : 'transparent', color: u.is_superadmin ? 'goldenrod' : 'var(--text)', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => handleSuperAdminToggle(u.id, !u.is_superadmin)}
+                        >
+                          {u.is_superadmin ? '★ S. Admin' : '☆ S. Admin'}
+                        </button>
+                      )}
+                      {(!u.is_superadmin || profile?.is_superadmin) && (
+                        <button className="btn" style={{ padding: '6px 4px', fontSize: '11px', flex: 1, background: 'rgba(255,50,50,0.1)', color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)', minHeight: 'auto' }} onClick={() => setUserToDelete(u)}>
+                          Excluir
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
